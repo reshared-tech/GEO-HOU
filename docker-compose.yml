@@ -1,0 +1,26 @@
+services:
+  geo:
+    build: .
+    image: geo-hou:latest
+    container_name: geo-hou
+    restart: unless-stopped
+    # 只绑到本机,由宿主机的 nginx 做 TLS 和对外暴露。
+    # 要直接对公网暴露就改成 "8000:8000",但那样没有 HTTPS。
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      GEO_MAX_BODY: "2097152"       # 单请求体上限(字节)
+      GEO_MAX_CONCURRENCY: "4"      # 同时在跑的重计算任务数,建议 = CPU 核数
+      GEO_RATE_LIMIT: "60"          # 每 IP 每窗口请求上限
+      GEO_RATE_WINDOW: "60"         # 限流窗口(秒)
+      GEO_TRUST_PROXY: "1"          # 挂在 nginx 后面,按 X-Forwarded-For 限流
+    read_only: true                 # 服务不写盘,整个根文件系统只读
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 512M

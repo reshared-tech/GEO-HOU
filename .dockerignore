@@ -1,0 +1,7 @@
+.git
+.github
+tests
+cases
+adapters
+*.md
+!source/**/*.md

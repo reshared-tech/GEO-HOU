@@ -1,0 +1,1472 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GEO-HOU 控制台</title>
+<style>
+  :root{
+    --ink:#16181d; --ink-2:#5b6270; --ink-3:#878d99; --line:#dcdfe6; --bg:#f5f6f8; --panel:#fff;
+    --accent:#a8331f; --ok:#1f7a44; --warn:#9a6b00; --bad:#b3261e; --soft:#eef0f3;
+    --mono:"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:14px/1.65 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+  header{background:var(--panel);border-bottom:1px solid var(--line);padding:14px 20px}
+  header h1{margin:0;font-size:16px;font-weight:650;letter-spacing:.01em}
+  header p{margin:3px 0 0;color:var(--ink-2);font-size:12.5px}
+  main{max-width:1240px;margin:0 auto;padding:20px;display:grid;
+       grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:18px;align-items:start}
+  @media (max-width:940px){main{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:4px}
+  .panel > h2{margin:0;padding:10px 14px;font-size:13px;font-weight:650;
+              border-bottom:1px solid var(--line);background:#fafbfc}
+  .body{padding:14px}
+  label{display:block;font-size:12.5px;color:var(--ink-2);margin:0 0 4px}
+  .f{margin-top:11px}
+  .f:first-child{margin-top:0}
+  input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);
+    border-radius:3px;font:inherit;background:#fff;color:var(--ink)}
+  textarea{font-family:var(--mono);font-size:12.5px;resize:vertical}
+  textarea.src{min-height:190px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:11px}
+  .grid .f{margin-top:0}
+  .groups{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line);background:#f2f3f5}
+  .groups button{border:0;background:none;padding:9px 14px;font:inherit;font-size:13px;
+    color:var(--ink-2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .groups button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent);font-weight:650}
+  .tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line);
+        background:#fafbfc;padding:7px 9px}
+  .tabs button{border:1px solid transparent;background:none;padding:3px 9px;font:inherit;
+    font-size:12.5px;color:var(--ink-2);cursor:pointer;border-radius:3px}
+  .tabs button:hover{background:var(--soft)}
+  .tabs button[aria-selected=true]{color:#fff;background:var(--accent);border-color:var(--accent);font-weight:600}
+  .fileblk{border:1px solid var(--line);border-radius:3px;margin-bottom:9px;overflow:hidden}
+  .fileblk .hd{background:#fafbfc;padding:5px 10px;border-bottom:1px solid var(--line);
+               display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600}
+  .fileblk pre{max-height:200px;padding:9px 10px;font-size:11.5px}
+  .rate-good{color:var(--ok)} .rate-ni{color:var(--warn)} .rate-poor{color:var(--bad)}
+  .actions{display:flex;gap:8px;align-items:center;margin-top:14px;
+           padding-top:13px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .btn{padding:8px 15px;border:1px solid var(--accent);background:var(--accent);color:#fff;
+       border-radius:3px;font:inherit;font-size:13px;cursor:pointer}
+  .btn.ghost{background:#fff;color:var(--ink);border-color:var(--line)}
+  .btn.mini{padding:4px 9px;font-size:12px}
+  .btn:disabled{opacity:.5;cursor:progress}
+  .hint{font-size:12px;color:var(--ink-2);margin:8px 0 0}
+  /* 结果区 */
+  .score{display:flex;align-items:baseline;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .score b{font-size:34px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1}
+  .meta{margin-left:auto;color:var(--ink-2);font-size:12.5px;text-align:right}
+  .grade{font-size:12.5px;padding:2px 8px;border-radius:3px;background:var(--soft)}
+  .g-bad{background:#fbe9e7;color:var(--bad)} .g-warn{background:#fdf3dd;color:var(--warn)}
+  .g-ok{background:#e6f4ec;color:var(--ok)}
+  .sec{padding:10px 14px;border-bottom:1px solid var(--soft)}
+  .sec:last-child{border-bottom:0}
+  .sec h3{margin:0 0 7px;font-size:12.5px;font-weight:600;display:flex;
+          justify-content:space-between;gap:10px;align-items:baseline}
+  .sec h3 em{font-style:normal;color:var(--ink-2);font-weight:400;font-variant-numeric:tabular-nums}
+  .bar{height:4px;background:var(--soft);border-radius:2px;overflow:hidden;margin-bottom:7px}
+  .bar i{display:block;height:100%;background:var(--accent)}
+  .bar.thin{height:3px;margin:3px 0 6px}
+  .chk{display:flex;gap:7px;font-size:12.5px;padding:1.5px 0;color:var(--ink-2)}
+  /* 标记列既放 OK/X 单字符,也放「档位」「TL;DR」这类词,必须不换行且能撑宽 */
+  .chk .m{flex:none;min-width:15px;white-space:nowrap;font-family:var(--mono);
+          font-weight:700;text-align:center}
+  .m.pass{color:var(--ok)} .m.fail{color:var(--bad)} .m.partial{color:var(--warn)}
+  .note{font-size:12px;color:var(--ink-3);padding:10px 14px;border-top:1px solid var(--soft);background:#fcfcfd}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{padding:5px 8px;text-align:left;border-bottom:1px solid var(--soft);vertical-align:top}
+  th{color:var(--ink-2);font-weight:600;background:#fafbfc;white-space:nowrap}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .wrap{overflow-x:auto}
+  .card{border:1px solid var(--line);border-radius:3px;margin:0 0 9px;overflow:hidden}
+  .card > .hd{background:#fafbfc;padding:6px 10px;font-size:12.5px;font-weight:600;
+              border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:baseline}
+  .card > .bd{padding:8px 10px;font-size:12.5px}
+  .card .lbl{color:var(--ink-2);font-size:11.5px;display:block;margin-top:7px}
+  .card .lbl:first-child{margin-top:0}
+  .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:2px;
+       background:var(--soft);color:var(--ink-2);margin:0 4px 3px 0}
+  .rival{border:1px solid var(--line);border-radius:3px;padding:9px;margin-top:8px;background:#fcfcfd}
+  .rival .top{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+  .rival .top input{flex:1}
+  pre{margin:0;padding:14px;font-family:var(--mono);font-size:12px;white-space:pre-wrap;
+      word-break:break-word;max-height:660px;overflow:auto}
+  .empty{padding:34px 14px;text-align:center;color:var(--ink-2);font-size:13px}
+  .err{margin:0;padding:12px 14px;background:#fbe9e7;color:var(--bad);font-size:13px}
+  footer{max-width:1240px;margin:0 auto;padding:0 20px 30px;color:var(--ink-2);font-size:12px}
+  code{font-family:var(--mono);background:var(--soft);padding:1px 4px;border-radius:2px}
+  details{margin-top:8px} summary{cursor:pointer;font-size:12.5px;color:var(--ink-2)}
+</style>
+</head>
+<body>
+<header>
+  <h1>GEO-HOU 控制台 <span style="font-weight:400;color:var(--ink-2)">· 生成式引擎优化</span></h1>
+  <p>粘贴网页源码，离线出评分、诊断、改写指令与作战手册。不抓取 URL，不存储正文。</p>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="groups" role="tablist" id="groups"></div>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="body">
+      <div class="f" id="w-html">
+        <label for="html">网页源码（整段 HTML）</label>
+        <textarea id="html" class="src" spellcheck="false"
+          placeholder="浏览器右键「查看网页源代码」，全选粘贴到这里。别粘渲染后的 DOM——评分要判断 CSR 空壳。"></textarea>
+      </div>
+
+      <div class="f" id="w-rivals">
+        <label>竞品页面（第一个是你自己，上面那个框）</label>
+        <div id="rivals"></div>
+        <button class="btn ghost mini" id="add-rival" style="margin-top:8px">+ 添加竞品页</button>
+      </div>
+
+      <div class="grid">
+        <div class="f" id="w-market"><label for="market">市场口径</label>
+          <select id="market"><option value="auto">自动判定</option><option value="cn">国内</option><option value="global">海外</option></select></div>
+        <div class="f" id="w-queries"><label for="queries">目标问句（每行一条）</label>
+          <textarea id="queries" rows="2" placeholder="公众号排版工具哪个好"></textarea></div>
+        <div class="f" id="w-brand"><label for="brand">品牌名</label><input id="brand" placeholder="智能排版器"></div>
+        <div class="f" id="w-category"><label for="category">品类/业务</label><input id="category" placeholder="公众号排版工具"></div>
+        <div class="f" id="w-engines"><label for="engines">目标引擎（每行一个）</label>
+          <textarea id="engines" rows="2" placeholder="豆包&#10;元宝"></textarea></div>
+        <div class="f" id="w-competitors"><label for="competitors">竞品名（每行一个）</label>
+          <textarea id="competitors" rows="2" placeholder="壹伴"></textarea></div>
+      </div>
+
+      <div id="w-pages">
+        <label>页面列表（每项一个页面的源码）</label>
+        <div id="pages"></div>
+        <button class="btn ghost mini" id="add-page" style="margin-top:8px">+ 添加页面</button>
+      </div>
+
+      <div id="w-cann">
+        <div class="f"><label for="cn-threshold">重叠阈值（0~1，默认 0.5）</label>
+          <input id="cn-threshold" type="number" step="0.05" min="0" max="1" placeholder="0.5"></div>
+      </div>
+
+      <div id="w-ilinks">
+        <div class="grid">
+          <div class="f"><label for="il-home">首页文件名</label><input id="il-home" placeholder="home.html"></div>
+          <div class="f"><label for="il-hosts">本站域名（每行一个）</label>
+            <textarea id="il-hosts" rows="2" placeholder="example.com"></textarea></div>
+        </div>
+        <p class="hint">不填域名，带域名的绝对链接一律不计为站内。</p>
+      </div>
+
+      <div id="w-records">
+        <div class="f"><label for="rec-mode">采样记录录入方式</label>
+          <select id="rec-mode"><option value="form">逐条录入</option><option value="json">粘贴 JSON</option></select></div>
+        <div id="rec-form">
+          <div id="records"></div>
+          <button class="btn ghost mini" id="add-record" style="margin-top:8px">+ 添加一条记录</button>
+        </div>
+        <div class="f" id="rec-json" hidden><label for="rec-raw">records JSON</label>
+          <textarea id="rec-raw" rows="8" spellcheck="false"
+            placeholder='[{"prompt":"排版工具哪个好","engine":"豆包","answer":"AI 的完整回答原文","cited_urls":["https://..."]}]'></textarea></div>
+        <p class="hint">工具不联网、不替你去问 AI。去目标引擎实际提问，把回答原文贴回来。绝不编造 AI 回答。</p>
+      </div>
+
+      <div id="w-domain">
+        <div class="f"><label for="m-domain">你的域名（用于区分自有/获得型引用）</label>
+          <input id="m-domain" placeholder="example.com"></div>
+      </div>
+
+      <div id="w-facts">
+        <label>品牌真相（AI 说错时用来比对）</label>
+        <div id="facts"></div>
+        <button class="btn ghost mini" id="add-fact" style="margin-top:8px">+ 添加一条真相</button>
+      </div>
+
+      <div id="w-brief">
+        <div class="f"><label for="b-topic">话题</label><input id="b-topic" placeholder="公众号排版"></div>
+        <div class="grid">
+          <div class="f"><label for="b-question">核心问句</label><input id="b-question" placeholder="公众号怎么排版"></div>
+          <div class="f"><label for="b-lang">语言</label>
+            <select id="b-lang"><option value="zh">中文</option><option value="en">English</option></select></div>
+        </div>
+        <div class="f"><label for="b-sections">章节小标题（每行一条，建议写成用户问句）</label>
+          <textarea id="b-sections" rows="3" placeholder="公众号排版是什么&#10;怎么快速排版"></textarea></div>
+        <div class="grid">
+          <div class="f"><label for="b-entities">需覆盖实体（每行一个）</label><textarea id="b-entities" rows="2"></textarea></div>
+          <div class="f"><label for="b-paa">相关问题 PAA（每行一个）</label><textarea id="b-paa" rows="2"></textarea></div>
+        </div>
+      </div>
+
+      <div id="w-sourcing">
+        <div class="grid">
+          <div class="f"><label for="s-roots">词根（每行一个，留空用品类）</label><textarea id="s-roots" rows="2"></textarea></div>
+          <div class="f"><label for="s-ctype">内容类型</label>
+            <select id="s-ctype"><option value="">不限</option><option>video</option><option>tech</option>
+              <option>种草</option><option>消费</option><option>b2b</option><option>b2c</option></select></div>
+        </div>
+      </div>
+
+      <div id="w-recommend">
+        <div class="grid">
+          <div class="f"><label for="r-reverse">反查：平台名（填了就忽略引擎）</label><input id="r-reverse" placeholder="知乎"></div>
+          <div class="f"><label for="r-top">只看前 N 个</label><input id="r-top" type="number" min="1" placeholder="全部"></div>
+        </div>
+        <p class="hint">引擎可填 <code>cn-all</code> / <code>overseas-all</code> 批量展开。</p>
+      </div>
+
+      <div id="w-intent">
+        <div class="f"><label for="q-query">用户问句</label><input id="q-query" placeholder="公众号排版工具哪个好"></div>
+      </div>
+
+      <div id="w-cwv">
+        <p class="hint" style="margin:0 0 8px">数值从 PageSpeed Insights 抄过来，至少填一项。</p>
+        <div class="grid">
+          <div class="f"><label for="c-lcp">LCP（秒）</label><input id="c-lcp" type="number" step="0.1" placeholder="2.5"></div>
+          <div class="f"><label for="c-inp">INP（毫秒）</label><input id="c-inp" type="number" step="1" placeholder="200"></div>
+        </div>
+        <div class="f"><label for="c-cls">CLS</label><input id="c-cls" type="number" step="0.01" placeholder="0.1"></div>
+      </div>
+
+      <div id="w-token">
+        <div class="f"><label for="t-text">正文</label><textarea id="t-text" rows="6" placeholder="粘贴正文，估算约占多少 token"></textarea></div>
+        <div class="f"><label for="t-budget">预算上限（留空只估算）</label><input id="t-budget" type="number" min="1" placeholder="4000"></div>
+      </div>
+
+      <div id="w-attr">
+        <div class="f"><label for="a-mode">模式</label>
+          <select id="a-mode"><option value="kit">生成归因物料（GA4 正则 / UTM）</option>
+            <option value="log">解析爬虫访问日志</option></select></div>
+        <div class="f" id="a-kit"><label for="a-url">站点 URL</label><input id="a-url" placeholder="https://example.com"></div>
+        <div class="f" id="a-logbox" hidden><label for="a-log">访问日志内容</label>
+          <textarea id="a-log" rows="7" spellcheck="false" placeholder="粘贴 nginx/apache access.log 内容"></textarea></div>
+      </div>
+
+      <div id="w-files">
+        <div class="grid">
+          <div class="f"><label for="f-site">站点名</label><input id="f-site" placeholder="示例科技"></div>
+          <div class="f"><label for="f-url">站点 URL（留空不生成 sitemap/feed）</label><input id="f-url" placeholder="https://example.com"></div>
+        </div>
+        <div class="grid">
+          <div class="f"><label for="f-author">负责人</label><input id="f-author" placeholder="张三"></div>
+          <div class="f"><label for="f-date">日期</label><input id="f-date" placeholder="2026-06-21"></div>
+        </div>
+        <div class="f"><label><input type="checkbox" id="f-allowtrain" style="width:auto;margin-right:6px">允许 AI 用于训练采集</label></div>
+      </div>
+
+      <div id="w-hreflang">
+        <div class="f"><label for="h-locales">语言版本（每行 <code>语言代码::URL</code>）</label>
+          <textarea id="h-locales" rows="4" placeholder="zh-CN::https://example.com/zh&#10;en::https://example.com/en"></textarea></div>
+        <div class="f"><label for="h-xdefault">x-default URL</label><input id="h-xdefault" placeholder="https://example.com/"></div>
+      </div>
+
+      <div id="w-push">
+        <div class="grid">
+          <div class="f"><label for="p-site">站点（百度资源平台里的域名）</label><input id="p-site" placeholder="https://example.com"></div>
+          <div class="f"><label for="p-token">推送 Token</label><input id="p-token" placeholder="你的TOKEN"></div>
+        </div>
+        <div class="f"><label for="p-urls">要推送的 URL（每行一条）</label>
+          <textarea id="p-urls" rows="4" placeholder="https://example.com/a"></textarea></div>
+        <div class="f"><label><input type="checkbox" id="p-fast" style="width:auto;margin-right:6px">使用快速收录接口</label></div>
+      </div>
+
+      <div id="w-index">
+        <div class="f"><label for="i-site">域名</label><input id="i-site" placeholder="example.com"></div>
+      </div>
+
+      <div id="w-gen">
+        <div class="f"><label for="gen-kind">生成什么</label>
+          <select id="gen-kind">
+            <option value="robots">robots.txt（AI 爬虫准入）</option>
+            <option value="llms">llms.txt（AI 发现文件）</option>
+            <option value="schema">JSON-LD 结构化数据</option>
+          </select></div>
+        <div id="g-robots">
+          <div class="f"><label for="strategy">策略</label>
+            <select id="strategy">
+              <option value="allow-all">allow-all 全放</option>
+              <option value="expose-only">expose-only 只曝光、禁训练采集</option>
+              <option value="cn-index">cn-index 国内求收录</option>
+            </select></div>
+          <div class="f"><label for="sitemap">sitemap URL</label><input id="sitemap" placeholder="https://example.com/sitemap.xml"></div>
+        </div>
+        <div id="g-llms" hidden>
+          <div class="f"><label for="site">站点名</label><input id="site" placeholder="示例科技"></div>
+          <div class="f"><label for="summary">一句话简介</label><input id="summary"></div>
+          <div class="f"><label for="links">链接（每行 <code>url | 名称 | 描述</code>）</label>
+            <textarea id="links" rows="3" placeholder="https://example.com/docs | 文档 | 快速上手"></textarea></div>
+        </div>
+        <div id="g-schema" hidden>
+          <div class="f"><label for="stype">类型</label>
+            <select id="stype"><option>article</option><option>faqpage</option><option>howto</option><option>product</option><option>organization</option><option>website</option></select></div>
+          <div class="grid">
+            <div class="f"><label for="stitle">标题 / 名称</label><input id="stitle"></div>
+            <div class="f"><label for="sauthor">作者</label><input id="sauthor"></div>
+          </div>
+          <div class="f"><label for="sqa">FAQ 问答（每行 <code>问::答</code>，仅 faqpage）</label>
+            <textarea id="sqa" rows="2" placeholder="GEO是什么::优化内容被AI引擎引用的实践"></textarea></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="run">运行</button>
+        <span id="downloads" style="display:flex;gap:8px;flex-wrap:wrap"></span>
+        <span class="hint" id="status" style="margin:0"></span>
+      </div>
+      <p class="hint" id="tip"></p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>结果</h2>
+    <div id="out"><div class="empty">左侧填好后点「运行」</div></div>
+  </section>
+</main>
+
+<footer>
+  服务不落盘、不记录提交的正文。所有结论为离线确定性计算；引语、统计、引用只使用真实素材。
+  完整 API 见 <code>GET /api</code>。
+</footer>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+// 每个功能：属于哪组、调哪个端点、露哪些字段块、下载什么。加功能只需在这里加一行。
+const TABS = {
+  // —— 诊断 ——
+  score:    {g:"诊断", name:"评分", path:"/api/score", fields:["html","market"],
+             dl:[["/api/score.html","geo-score.html","下载 HTML 报告"],
+                 ["/api/report.sarif","geo-score.sarif","下载 SARIF（接 CI）"]],
+             tip:"6 维 22 项可被引用度打分，含否决项与最该先修的 5 项。"},
+  batch:    {g:"诊断", name:"批量审计", path:"/api/batch", fields:["pages","market"],
+             dl:[["/api/batch.html","geo-batch.html","下载 HTML 报告"]],
+             tip:"一次打多个页面的分，弱页优先排前面，先修最差的。"},
+  cannibalize:{g:"诊断", name:"关键词蚕食", path:"/api/cannibalize", fields:["pages","cann"],
+             tip:"检测多个页面抢同一意图。静态重叠启发式，非 GSC 数据驱动。"},
+  ilinks:   {g:"诊断", name:"内链审计", path:"/api/internal-links", fields:["pages","ilinks"],
+             tip:"找孤儿页（0 内链指向，拿不到权重传导）与无出链页。"},
+  cescore:  {g:"诊断", name:"内容工程", path:"/api/cescore", fields:["html","market","queries"],
+             tip:"11 要素加权分 + 段落级标注。填了目标问句才算真实需求覆盖率。"},
+  diagnose: {g:"诊断", name:"根因诊断", path:"/api/diagnose", fields:["html","market"],
+             tip:"「为什么没被 AI 引用」7 类根因逐条判定。"},
+  agentready:{g:"诊断", name:"Agent 就绪", path:"/api/agentready", fields:["html"],
+             tip:"WebMCP / agent 任务就绪静态审计，并检测验证码、注册墙等挡住 AI 的反模式。"},
+  cwv:      {g:"诊断", name:"Core Web Vitals", path:"/api/cwv", fields:["cwv"],
+             tip:"喂 PageSpeed Insights 的数值，出评级与阈值对照。工具不联网，不代跑测速。"},
+  token:    {g:"诊断", name:"Token 预算", path:"/api/token", fields:["token"],
+             tip:"估算正文约占多少 token。近似算法，精确请用各模型官方 tokenizer。"},
+  // —— 产出 ——
+  playbook: {g:"产出", name:"作战手册", path:"/api/playbook",
+             fields:["html","market","queries","brand","category","engines","competitors"],
+             dl:[["/api/playbook.html","geo-playbook.html","下载 HTML 手册"]],
+             tip:"旗舰：八层瓶颈定位 + 诊断 + 信源策略 + 改写指引 + 监测方案。"},
+  rewrite:  {g:"产出", name:"改写指令", path:"/api/rewrite", fields:["html","market","engines"],
+             dl:[["/api/rewrite.md","rewrite-instructions.md","下载改写指令"]],
+             tip:"吃评分结果，出可直接喂任意大模型的改写指令包。引擎填多个只取第一个。"},
+  brief:    {g:"产出", name:"内容简报", path:"/api/brief", fields:["brief","engines"],
+             dl:[["/api/brief.md","geo-brief.md","下载 Markdown"]],
+             tip:"以可被引用性为骨架的 GEO brief。专家洞察槽位必须由人填，不可用 AI 补。"},
+  sourcing: {g:"产出", name:"信源策略", path:"/api/sourcing",
+             fields:["category","engines","sourcing","market"],
+             tip:"八层 2-4 层：词根→问句矩阵 + 引擎信源偏好 + P0/P1/P2 投放 SOP。"},
+  // —— 度量 ——
+  compare:  {g:"度量", name:"竞品对标", path:"/api/compare", fields:["html","rivals","market","queries"],
+             dl:[["/api/compare.md","geo-compare.md","下载对标报告"]],
+             tip:"你的页 vs 竞品页逐要素比强弱。只比内容质量层，谁真被引用还要跑采样。"},
+  prompts:  {g:"度量", name:"Prompt 集", path:"/api/prompts", fields:["brand","category","competitors"],
+             dl:[["/api/prompts.csv","buyer-prompts.csv","下载 CSV"]],
+             tip:"生成 buyer prompt 集，拿去目标引擎采样，回头喂 sov 度量声量份额。"},
+  recommend:{g:"度量", name:"平台推荐", path:"/api/recommend", fields:["engines","recommend"],
+             tip:"给目标引擎推荐优先发哪些平台；也可反查某平台能喂哪些引擎。"},
+  intent:   {g:"度量", name:"意图分类", path:"/api/intent", fields:["intent"],
+             tip:"判断问句属于信息/商业/交易/导航意图，给对应内容类型与 schema。"},
+  measurekit:{g:"度量", name:"采集工具包", path:"/api/measure-kit",
+             fields:["brand","category","engines","competitors"],
+             dl:[["/api/measure-kit.md","measure-kit.md","下载采样协议"]],
+             tip:"出采样协议 + 要问的 prompt 清单 + records 模板。拿着它去目标引擎采样。"},
+  measure:  {g:"度量", name:"综合监测", path:"/api/measure",
+             fields:["records","brand","competitors","domain","facts"],
+             dl:[["/api/measure.md","measure-report.md","下载监测报告"]],
+             tip:"喂采样记录，一次出声量份额 + 竞品夺走 + 错误信息三张表。"},
+  sov:      {g:"度量", name:"声量份额", path:"/api/sov",
+             fields:["records","brand","competitors","domain"],
+             tip:"三套 SoV 公式 + 采样置信度 + 自有/获得型引用拆分 + 情感倾向。"},
+  lostprompt:{g:"度量", name:"竞品夺走", path:"/api/lostprompt",
+             fields:["records","brand","competitors"],
+             tip:"找出竞品出现而你缺席的问句，这些是优先夺回的目标。"},
+  factcheck:{g:"度量", name:"错误信息", path:"/api/factcheck",
+             fields:["records","brand","facts"],
+             tip:"AI 说错你的事实（价格、停产、功能）时标出来。真相由你提供，工具不臆断。"},
+  attribution:{g:"度量", name:"归因", path:"/api/attribution", fields:["attr"],
+             tip:"生成 GA4 渠道组正则与 UTM 物料；或粘访问日志解析 AI 爬虫来源。"},
+  // —— 生成 ——
+  generate: {g:"生成", name:"robots / llms / schema", path:null, fields:["gen"],
+             tip:"确定性生成配置文件，不需要网页源码。"},
+  files:    {g:"生成", name:"AI 发现文件", path:"/api/files", fields:["files"],
+             tip:"一次生成 ai.txt、robots.patch、humans.txt，填了 URL 再加 sitemap.xml、feed.xml。"},
+  hreflang: {g:"生成", name:"多语言 hreflang", path:"/api/hreflang", fields:["hreflang"],
+             tip:"生成 hreflang 标注，避免 AI 引到错误语言版本。"},
+  baidupush:{g:"生成", name:"百度主动推送", path:"/api/baidu-push", fields:["push"],
+             tip:"生成百度主动推送脚本。国内收录第一杠杆，收录是被国产 AI 引用的前置。"},
+  indexcheck:{g:"生成", name:"收录自查", path:"/api/baidu-index-check", fields:["index"],
+             tip:"给出百度/神马/搜狗的收录自查语法。工具不联网，只给查法。"},
+};
+const ALL_FIELDS = ["html","rivals","pages","market","queries","brand","category","engines",
+                    "competitors","cann","ilinks","records","domain","facts",
+                    "brief","sourcing","recommend","intent","cwv","token","attr","files",
+                    "hreflang","push","index","gen"];
+const GROUPS = ["诊断","产出","度量","生成"];
+let tab = "score";
+
+// ---- 两级导航 ----
+const groupsEl = $("groups"), tabsEl = $("tabs");
+for (const g of GROUPS) {
+  const b = document.createElement("button");
+  b.type = "button"; b.dataset.group = g; b.textContent = g;
+  groupsEl.append(b);
+}
+groupsEl.onclick = e => {
+  const b = e.target.closest("button[data-group]"); if (!b) return;
+  const first = Object.keys(TABS).find(k => TABS[k].g === b.dataset.group);
+  selectTab(first);
+};
+tabsEl.onclick = e => {
+  const b = e.target.closest("button[data-tab]"); if (!b) return;
+  selectTab(b.dataset.tab);
+};
+function selectTab(key) {
+  tab = key;
+  const grp = TABS[key].g;
+  [...groupsEl.children].forEach(x => x.setAttribute("aria-selected", x.dataset.group === grp));
+  // 只在换组时重建按钮:同组内重建会让当前按钮节点被换掉,已有的引用全部失效
+  if (tabsEl.dataset.group !== grp) {
+    tabsEl.dataset.group = grp;
+    tabsEl.replaceChildren();
+    for (const [k, cfg] of Object.entries(TABS)) {
+      if (cfg.g !== grp) continue;
+      const b = document.createElement("button");
+      b.type = "button"; b.role = "tab"; b.dataset.tab = k; b.textContent = cfg.name;
+      tabsEl.append(b);
+    }
+  }
+  [...tabsEl.children].forEach(x => x.setAttribute("aria-selected", x.dataset.tab === key));
+  const shown = new Set(TABS[key].fields);
+  ALL_FIELDS.forEach(f => { $("w-" + f).hidden = !shown.has(f); });
+  $("tip").textContent = TABS[key].tip;
+  $("downloads").replaceChildren();
+  $("out").replaceChildren(el("div", "empty", "左侧填好后点「运行」"));
+  $("status").textContent = "";
+  if (shown.has("rivals") && !$("rivals").children.length) addRival();
+  if (shown.has("pages") && !$("pages").children.length) { addPage(); addPage(); }
+  if (shown.has("records") && !$("records").children.length) addRecord();
+  if (shown.has("facts") && !$("facts").children.length) addFact();
+}
+
+// ---- 竞品页面动态列表 ----
+function addRival() {
+  const n = $("rivals").children.length + 1;
+  const box = document.createElement("div");
+  box.className = "rival";
+  box.innerHTML = `<div class="top">
+      <input class="r-label" placeholder="竞品${n}">
+      <button type="button" class="btn ghost mini r-del">移除</button>
+    </div>
+    <textarea class="r-html" rows="4" spellcheck="false" placeholder="竞品页面源码"></textarea>`;
+  box.querySelector(".r-del").onclick = () => box.remove();
+  $("rivals").append(box);
+}
+$("add-rival").onclick = addRival;
+
+function rowBox(host, html, onDel) {
+  const box = document.createElement("div");
+  box.className = "rival";
+  box.innerHTML = html;
+  const del = box.querySelector(".r-del");
+  if (del) del.onclick = () => { box.remove(); if (onDel) onDel(); };
+  host.append(box);
+  return box;
+}
+
+function addPage() {
+  const n = $("pages").children.length + 1;
+  rowBox($("pages"), `<div class="top">
+      <input class="p-label" placeholder="page${n}.html">
+      <button type="button" class="btn ghost mini r-del">移除</button>
+    </div>
+    <textarea class="p-html" rows="4" spellcheck="false" placeholder="这个页面的 HTML 源码"></textarea>`);
+}
+$("add-page").onclick = addPage;
+
+function addRecord() {
+  rowBox($("records"), `<div class="top">
+      <input class="rc-prompt" placeholder="你问的问句">
+      <input class="rc-engine" placeholder="引擎，如 豆包" style="max-width:130px">
+      <button type="button" class="btn ghost mini r-del">移除</button>
+    </div>
+    <textarea class="rc-answer" rows="3" spellcheck="false" placeholder="粘贴 AI 的完整回答原文"></textarea>
+    <input class="rc-urls" placeholder="回答里引用的 URL，逗号分隔（可留空）" style="margin-top:6px">`);
+}
+$("add-record").onclick = addRecord;
+
+function addFact() {
+  rowBox($("facts"), `<div class="top">
+      <input class="ft-attr" placeholder="属性，如 定价">
+      <button type="button" class="btn ghost mini r-del">移除</button>
+    </div>
+    <input class="ft-truth" placeholder="正确值，如 专业版每月99元">
+    <input class="ft-wrong" placeholder="AI 的错误说法，逗号分隔" style="margin-top:6px">`);
+}
+$("add-fact").onclick = addFact;
+
+$("rec-mode").onchange = e => {
+  $("rec-form").hidden = e.target.value !== "form";
+  $("rec-json").hidden = e.target.value !== "json";
+};
+
+function collectRecords() {
+  if ($("rec-mode").value === "json") return $("rec-raw").value;
+  const out = [];
+  for (const b of $("records").children) {
+    const answer = b.querySelector(".rc-answer").value.trim();
+    if (!answer) continue;
+    const rec = {prompt: b.querySelector(".rc-prompt").value.trim(),
+                 engine: b.querySelector(".rc-engine").value.trim(),
+                 answer};
+    const urls = b.querySelector(".rc-urls").value.split(/[,，\s]+/).filter(Boolean);
+    if (urls.length) rec.cited_urls = urls;
+    out.push(rec);
+  }
+  return out;
+}
+
+function collectFacts() {
+  const out = [];
+  for (const b of $("facts").children) {
+    const truth = b.querySelector(".ft-truth").value.trim();
+    if (!truth) continue;
+    out.push({attribute: b.querySelector(".ft-attr").value.trim() || "事实",
+              truth,
+              wrong: b.querySelector(".ft-wrong").value.split(/[,，]/).map(x => x.trim()).filter(Boolean)});
+  }
+  return out;
+}
+
+function collectPages() {
+  const out = [];
+  for (const b of $("pages").children) {
+    const html = b.querySelector(".p-html").value;
+    if (!html.trim()) continue;
+    out.push({label: b.querySelector(".p-label").value.trim(), html});
+  }
+  return out;
+}
+
+$("a-mode").onchange = e => {
+  $("a-kit").hidden = e.target.value !== "kit";
+  $("a-logbox").hidden = e.target.value !== "log";
+};
+$("gen-kind").onchange = e => {
+  for (const k of ["robots","llms","schema"]) $("g-" + k).hidden = e.target.value !== k;
+};
+
+// ---- 组装请求 ----
+const lines = id => $(id).value.split("\n").map(s => s.trim()).filter(Boolean);
+
+function genRequest() {
+  const k = $("gen-kind").value;
+  if (k === "robots") return ["/api/robots", {strategy:$("strategy").value, sitemap:$("sitemap").value}];
+  if (k === "llms")   return ["/api/llms", {site:$("site").value, summary:$("summary").value, links:$("links").value}];
+  return ["/api/schema", {type:$("stype").value, title:$("stitle").value, name:$("stitle").value,
+                          author:$("sauthor").value, qa:lines("sqa")}];
+}
+
+function buildPayload() {
+  if (tab === "generate") return genRequest();
+  const f = new Set(TABS[tab].fields), p = {};
+  if (f.has("html"))        p.html = $("html").value;
+  if (f.has("market"))      p.market = $("market").value;
+  if (f.has("queries"))     p.queries = lines("queries");
+  if (f.has("brand"))       p.brand = $("brand").value;
+  if (f.has("category"))    p.category = $("category").value;
+  if (f.has("engines"))     p.engines = lines("engines");
+  if (f.has("competitors")) p.competitors = lines("competitors");
+  if (f.has("pages")) p.pages = collectPages();
+  if (f.has("cann") && $("cn-threshold").value) p.threshold = Number($("cn-threshold").value);
+  if (f.has("ilinks")) { p.home = $("il-home").value; p.hosts = lines("il-hosts"); }
+  if (f.has("records")) p.records = collectRecords();
+  if (f.has("domain")) p.brand_domain = $("m-domain").value;
+  if (f.has("facts")) { const ft = collectFacts(); if (ft.length) p.facts = ft; }
+  if (f.has("brief")) {
+    p.topic = $("b-topic").value; p.question = $("b-question").value;
+    p.lang = $("b-lang").value;
+    p.sections = lines("b-sections"); p.entities = lines("b-entities"); p.paa = lines("b-paa");
+  }
+  if (f.has("sourcing")) { p.roots = lines("s-roots"); p.content_type = $("s-ctype").value; }
+  if (f.has("recommend")) {
+    const rev = $("r-reverse").value.trim();
+    if (rev) { return ["/api/recommend", {reverse: rev}]; }   // 反查与正查互斥
+    if ($("r-top").value) p.top = Number($("r-top").value);
+  }
+  if (f.has("intent")) p.query = $("q-query").value;
+  if (f.has("cwv")) for (const k of ["lcp","inp","cls"]) {
+    const v = $("c-" + k).value; if (v !== "") p[k] = Number(v);
+  }
+  if (f.has("token")) {
+    p.text = $("t-text").value;
+    if ($("t-budget").value) p.budget = Number($("t-budget").value);
+  }
+  if (f.has("attr")) {
+    if ($("a-mode").value === "log") return ["/api/attribution-log", {log: $("a-log").value}];
+    p.url = $("a-url").value;
+  }
+  if (f.has("files")) {
+    p.site = $("f-site").value; p.url = $("f-url").value;
+    p.author = $("f-author").value; p.date = $("f-date").value;
+    p.allow_train = $("f-allowtrain").checked;
+  }
+  if (f.has("hreflang")) { p.locales = lines("h-locales"); p.x_default = $("h-xdefault").value; }
+  if (f.has("push")) {
+    p.site = $("p-site").value; p.token = $("p-token").value;
+    p.urls = lines("p-urls"); p.fast = $("p-fast").checked;
+  }
+  if (f.has("index")) p.site = $("i-site").value;
+  if (f.has("rivals")) {
+    // compare 的第一项固定是你自己,后面才是竞品
+    p.pages = [{label: "你", html: $("html").value}];
+    for (const box of $("rivals").children) {
+      const html = box.querySelector(".r-html").value;
+      if (html.trim()) p.pages.push({label: box.querySelector(".r-label").value.trim(), html});
+    }
+    delete p.html;
+  }
+  return [TABS[tab].path, p];
+}
+
+function validate(path, p) {
+  if (path === "/api/compare")
+    return p.pages.length < 2 ? "至少要填一个竞品页面的源码" :
+           !p.pages[0].html.trim() ? "请先粘贴你自己的网页源码" : null;
+  if (path === "/api/prompts")
+    return (p.brand && p.category) ? null : "请填品牌名和品类";
+  if (["/api/batch","/api/cannibalize","/api/internal-links"].includes(path)) {
+    if (!p.pages.length) return "请至少填一个页面的源码";
+    if (path !== "/api/batch" && p.pages.length < 2) return "至少需要两个页面才能比对";
+  }
+  if (["/api/measure","/api/sov","/api/lostprompt","/api/factcheck"].includes(path)) {
+    const empty = typeof p.records === "string" ? !p.records.trim() : !p.records.length;
+    if (empty) return "请先录入采样记录（至少一条要有 AI 回答原文）";
+    if (!p.brand.trim()) return "请填品牌名";
+    if (path === "/api/factcheck" && !(p.facts || []).length)
+      return "错误信息检测需要至少一条品牌真相";
+  }
+  if (path === "/api/measure-kit" && !($("brand").value.trim() && $("category").value.trim()))
+    return "请填品牌名和品类";
+  if (path === "/api/brief" && !p.topic.trim()) return "请填话题";
+  if (path === "/api/sourcing" && !p.category.trim()) return "请填品类/业务";
+  if (path === "/api/recommend" && !(p.engines || []).length) return "请填目标引擎，或用反查填平台名";
+  if (path === "/api/intent" && !p.query.trim()) return "请填用户问句";
+  if (path === "/api/cwv" && !["lcp","inp","cls"].some(k => k in p))
+    return "至少填一项 LCP / INP / CLS";
+  if (path === "/api/token" && !p.text.trim()) return "请粘贴正文";
+  if (path === "/api/attribution-log" && !p.log.trim()) return "请粘贴访问日志内容";
+  if (path === "/api/hreflang" && !p.locales.length) return "请至少填一个语言版本";
+  if (path === "/api/baidu-push") {
+    if (!p.site.trim()) return "请填站点";
+    if (!p.urls.length) return "请至少填一条要推送的 URL";
+  }
+  if (path === "/api/baidu-index-check" && !p.site.trim()) return "请填域名";
+  if (TABS[tab].fields.includes("html") && !p.html.trim()) return "请先粘贴网页源码";
+  return null;
+}
+
+$("run").onclick = async () => {
+  const [path, payload] = buildPayload();
+  const bad = validate(path, payload);
+  if (bad) { showError(bad); return; }
+  $("run").disabled = true; $("status").textContent = "计算中…";
+  $("downloads").replaceChildren();
+  try {
+    const data = await call(path, payload);
+    RENDER[path] ? RENDER[path](data) : renderText(data);
+    for (const [dpath, fname, label] of (TABS[tab].dl || []))
+      addDownload(dpath, payload, fname, label);
+    $("status").textContent = "完成";
+  } catch (e) {
+    showError(e.message); $("status").textContent = "";
+  } finally { $("run").disabled = false; }
+};
+
+async function call(path, payload) {
+  const r = await fetch(path, {method:"POST", headers:{"Content-Type":"application/json"},
+                               body: JSON.stringify(payload)});
+  const isJson = (r.headers.get("content-type") || "").includes("json");
+  const data = isJson ? await r.json() : await r.text();
+  if (!r.ok) throw new Error((data && data.error) || ("HTTP " + r.status));
+  return data;
+}
+
+function showError(msg) {
+  const p = document.createElement("p"); p.className = "err"; p.textContent = msg;
+  $("out").replaceChildren(p);
+}
+
+// ---- 渲染工具 ----
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function gradeClass(v) { return v < 40 ? "g-bad" : v < 70 ? "g-warn" : "g-ok"; }
+function head(big, unit, grade, metaText) {
+  const d = el("div", "score");
+  d.append(el("b", null, String(big)));
+  if (unit) d.append(el("span", null, unit));
+  if (grade) d.append(el("span", "grade " + gradeClass(big), grade));
+  if (metaText) d.append(el("div", "meta", metaText));
+  return d;
+}
+function section(title, right) {
+  const s = el("div", "sec"), h = el("h3");
+  h.append(el("span", null, title));
+  if (right !== undefined) h.append(el("em", null, right));
+  s.append(h);
+  return s;
+}
+function bar(pct, thin) {
+  const b = el("div", "bar" + (thin ? " thin" : "")), i = el("i");
+  i.style.width = Math.max(0, Math.min(100, pct)).toFixed(0) + "%";
+  b.append(i); return b;
+}
+function line(mark, cls, text) {
+  const r = el("div", "chk");
+  r.append(el("span", "m " + (cls || ""), mark), el("span", null, text));
+  return r;
+}
+function table(headers, rows, numCols = []) {
+  const wrap = el("div", "wrap"), t = el("table"), thead = el("thead"), tr = el("tr");
+  headers.forEach((h, i) => tr.append(el("th", numCols.includes(i) ? "n" : null, h)));
+  thead.append(tr); t.append(thead);
+  const tb = el("tbody");
+  for (const row of rows) {
+    const r = el("tr");
+    row.forEach((c, i) => r.append(el("td", numCols.includes(i) ? "n" : null, String(c))));
+    tb.append(r);
+  }
+  t.append(tb); wrap.append(t); return t && wrap;
+}
+function noteOf(text) { return text ? el("p", "note", text) : null; }
+function renderText(data) {
+  const pre = el("pre", null, typeof data === "string" ? data : JSON.stringify(data, null, 2));
+  $("out").replaceChildren(pre);
+}
+
+// ---- 各页渲染器 ----
+const RENDER = {};
+
+RENDER["/api/score"] = d => {
+  const out = [head(d.score, "/100", d.grade,
+    `GEO ${d.geo_score ?? "—"} · SEO ${d.seo_score ?? "—"} · 市场 ${d.market}`)];
+  for (const dim of d.dimensions) {
+    const s = section(`[${dim.key}] ${dim.name}`, `${dim.earned.toFixed(1)}/${dim.weight_evaluated}`);
+    s.append(bar(dim.weight_evaluated ? dim.earned / dim.weight_evaluated * 100 : 0));
+    for (const c of dim.checks) {
+      const mk = {pass:"OK", fail:"X", partial:"~", unknown:"?"}[c.status];
+      s.append(line(mk, c.status,
+        `${c.name} ${c.earned.toFixed(1)}/${c.weight}` + (c.detail ? ` — ${c.detail}` : "")));
+    }
+    out.push(s);
+  }
+  if (d.vetoes && d.vetoes.length) {
+    const s = section("否决项", "总分已封顶");
+    d.vetoes.forEach(v => s.append(line("!", "fail", typeof v === "string" ? v : v.reason || JSON.stringify(v))));
+    out.push(s);
+  }
+  $("out").replaceChildren(...out);
+};
+
+RENDER["/api/cescore"] = d => {
+  const qc = d.query_coverage;
+  const out = [head(d.score, "/100", d.grade,
+    `证据引用层 ${d.evidence_layer_raw}/${d.evidence_layer_max_raw}` +
+    (qc === null || qc === undefined ? " · 未传问句，语义按启发式近似"
+                                     : ` · 需求覆盖率 ${(qc * 100).toFixed(0)}%`))];
+  // 按层分组：证据引用层权重最高，是被引用第一杠杆，排在最前
+  const layers = [];
+  for (const e of d.elements) {
+    let g = layers.find(x => x.name === e.layer);
+    if (!g) layers.push(g = {name: e.layer, items: [], w: 0});
+    g.items.push(e); g.w += e.weight;
+  }
+  for (const g of layers) {
+    const got = g.items.reduce((a, b) => a + b.weighted, 0);
+    const s = section(g.name, `${got.toFixed(1)}/${g.w}`);
+    s.append(bar(g.w ? got / g.w * 100 : 0));
+    for (const e of g.items) {
+      const row = el("div");
+      row.append(line(e.score_0_1 >= .7 ? "OK" : e.score_0_1 >= .35 ? "~" : "X",
+                      e.score_0_1 >= .7 ? "pass" : e.score_0_1 >= .35 ? "partial" : "fail",
+                      `${e.element} ${e.weighted.toFixed(1)}/${e.weight}` +
+                      (e.low_confidence ? "（低置信）" : "")));
+      const b = bar(e.score_0_1 * 100, true); b.style.marginLeft = "22px";
+      row.append(b);
+      s.append(row);
+    }
+    out.push(s);
+  }
+  if (d.weakest && d.weakest.length) {
+    const s = section("最该先补（按加权欠分）", d.weakest.length + " 项");
+    d.weakest.forEach((w, i) => s.append(line(String(i + 1), null, `${w.element} — ${w.formula}`)));
+    out.push(s);
+  }
+  const ann = d.annotation;
+  if (ann && ann.paragraphs && ann.paragraphs.length) {
+    const s = section("段落级改写指引", ann.paragraph_count + " 段");
+    const det = el("details");
+    det.append(el("summary", null, "展开逐段标注"));
+    const shown = ann.paragraphs.slice(0, 60);
+    det.append(table(["#", "段落", "已有要素", "建议补"],
+      shown.map(p => [p.index + 1, p.preview, (p.elements_present || []).join("、") || "—", p.tip || "—"]),
+      [0]));
+    if (ann.paragraphs.length > shown.length)
+      det.append(el("p", "hint", `仅显示前 ${shown.length} 段，完整结果请用 API 或 CLI。`));
+    s.append(det); out.push(s);
+  }
+  out.push(noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/diagnose"] = d => {
+  const passed = d.root_causes_checked - d.failed_count;
+  const out = [head(passed + "/" + d.root_causes_checked, "项通过",
+    d.failed_count ? "有问题" : "无阻断", `市场 ${d.market}`)];
+  out[0].querySelector(".grade").className =
+    "grade " + (d.failed_count ? "g-bad" : "g-ok");
+  const fails = d.findings.filter(f => f.status !== "pass");
+  const oks = d.findings.filter(f => f.status === "pass");
+  if (fails.length) {
+    const s = section("命中的根因", fails.length + " 条");
+    for (const f of fails) {
+      const c = el("div", "card");
+      const hd = el("div", "hd"); hd.append(el("span", "m fail", "X"), el("span", null, f.cause));
+      c.append(hd);
+      if (f.fix) { const bd = el("div", "bd"); bd.append(el("span", "lbl", "怎么修"), document.createTextNode(f.fix)); c.append(bd); }
+      s.append(c);
+    }
+    out.push(s);
+  }
+  if (oks.length) {
+    const s = section("已通过", oks.length + " 条");
+    oks.forEach(f => s.append(line("OK", "pass", f.cause)));
+    out.push(s);
+  }
+  out.push(noteOf(d.verdict));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/playbook"] = d => {
+  const b = d.bottleneck, s6 = d.score_6dim, ce = d.content_engineering;
+  const out = [head(s6.total, "/100", s6.grade, `内容工程 ${ce.score} · ${ce.grade}`)];
+  const bn = section("瓶颈层", b.bottleneck_layer);
+  for (const [mark, cls, text] of [["→","fail", b.first_action],
+                                   ["?","partial", b.confidence ? "置信度 " + b.confidence : ""],
+                                   ["!","", b.detection_boundary]]) {
+    if (text) bn.append(line(mark, cls, text));
+  }
+  out.push(bn);
+  const acts = section("行动清单（按 ROI 排序）", d.unified_actions.length + " 项");
+  d.unified_actions.forEach((a, i) => acts.append(line(String(i + 1), null, `[${a.layer}] ${a.action}`)));
+  out.push(acts);
+  const src = d.sourcing && d.sourcing.delivery_sop && d.sourcing.delivery_sop.tiers;
+  if (src) {
+    const s = section("信源投放分层", "P0 先打");
+    for (const t of ["P0","P1","P2"]) {
+      const items = src[t] || [];
+      if (items.length) s.append(line(t, t === "P0" ? "fail" : null,
+        items.map(x => typeof x === "string" ? x : (x.platform || x.name || JSON.stringify(x))).join("、")));
+    }
+    out.push(s);
+  }
+  out.push(noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/compare"] = d => {
+  const you = d.rows.find(r => r.label === d.you) || d.rows[0];
+  const out = [head(you.combined, "综合分", `第 ${d.you_rank}/${d.rows.length} 名`,
+                    `6 维 ${you.score_6dim} · 内容工程 ${you.content_score}`)];
+  out[0].querySelector(".grade").className =
+    "grade " + (d.you_rank === 1 ? "g-ok" : "g-warn");
+  const v = section("裁决");
+  v.append(line("→", d.you_rank === 1 ? "pass" : "fail", d.verdict));
+  out.push(v);
+  const rank = section("排名", "内容质量层");
+  rank.append(table(["排名","对象","综合分","6 维","内容工程","证据层/43"],
+    [...d.rows].sort((a, b) => a.rank - b.rank)
+      .map(r => [r.rank, r.label + (r.label === d.you && r.label !== "你" ? "（你）" : ""),
+                 r.combined, r.score_6dim, r.content_score, r.evidence_layer_raw]),
+    [0,2,3,4,5]));
+  out.push(rank);
+  if (d.gaps.length) {
+    const g = section("你落后的要素（按加权欠分）", d.gaps.length + " 项");
+    g.append(table(["要素","你","最强竞品","差距","权重","加权欠分"],
+      d.gaps.map(x => [x.element, x.your, x.best_competitor, x.gap, x.weight, x.weighted_gap]),
+      [1,2,3,4,5]));
+    out.push(g);
+  } else {
+    const g = section("差距要素", "无");
+    g.append(line("OK", "pass", "没有要素落后于综合分不低于你的竞品。"));
+    out.push(g);
+  }
+  out.push(noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/rewrite"] = d => {
+  const out = [head(d.instruction_count, "条指令", null,
+    `源页面评分 ${d.source_score} · 目标引擎 ${d.target_engine || "通用"}`)];
+  const s = el("div", "sec");
+  if (!d.instructions.length) s.append(line("OK", "pass", "没有需要改写的项，当前页面各维度均已达标。"));
+  for (const ins of d.instructions) {
+    const c = el("div", "card");
+    const hd = el("div", "hd");
+    hd.append(el("span", "m " + ins.status, ins.status === "fail" ? "X" : "~"),
+              el("span", null, `[${ins.check}] ${ins.diagnosis}`));
+    c.append(hd);
+    const bd = el("div", "bd");
+    bd.append(el("span", "lbl", "改写指令"), document.createTextNode(ins.rewrite_instruction));
+    if (ins.geo_method && ins.geo_method.length) {
+      bd.append(el("span", "lbl", "GEO 方法"));
+      ins.geo_method.forEach(m => bd.append(el("span", "tag", m)));
+    }
+    if (ins.constraints && ins.constraints.length) {
+      bd.append(el("span", "lbl", "硬约束"));
+      ins.constraints.forEach(x => bd.append(el("span", "tag", x)));
+    }
+    if (ins.anti_ai_clause) {
+      const det = el("details");
+      det.append(el("summary", null, "反 AI 味约束"), el("p", "hint", ins.anti_ai_clause));
+      bd.append(det);
+    }
+    c.append(bd); s.append(c);
+  }
+  out.push(s, noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/prompts"] = d => {
+  const rows = d.rows || [];
+  const nonBrand = rows.filter(r => r.brand_type === "non-brand").length;
+  const out = [head(rows.length, "条 prompt", null,
+    `非品牌词 ${nonBrand} 条 · 建议每条每平台采样 ${rows[0] ? rows[0].samples_recommended : 3} 次`)];
+  const s = section("问句集", "拿去目标引擎采样后喂 sov 度量");
+  s.append(table(["ID","问句","意图","漏斗","类型","语言"],
+    rows.map(r => [r.id, r.prompt, r.intent, r.funnel, r.brand_type, r.lang])));
+  out.push(s);
+  $("out").replaceChildren(...out);
+};
+
+RENDER["/api/agentready"] = d => {
+  const out = [head(d.score, "/100", d.grade, `检测到 ${d.form_count} 个表单`)];
+  const s1 = section("就绪检查", d.checks.length + " 项");
+  for (const c of d.checks) {
+    s1.append(line(c.status === "pass" ? "OK" : c.status === "partial" ? "~" : "X", c.status,
+                   `${c.name} ${c.earned}/${c.weight}`));
+    if (c.status !== "pass" && c.fix) {
+      const f = line(" ", "", c.fix); f.style.paddingLeft = "22px";
+      f.style.color = "var(--ink-3)"; s1.append(f);
+    }
+  }
+  out.push(s1);
+  if (d.antipattern_count) {
+    const s2 = section("agent 反模式", d.antipattern_count + " 处");
+    d.antipatterns.forEach(a => s2.append(line("!", "fail",
+      typeof a === "string" ? a : (a.pattern || a.name || JSON.stringify(a)))));
+    out.push(s2);
+  }
+  out.push(noteOf(d.antipattern_note), noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/recommend"] = d => {
+  if (d.platform) {   // 反查模式
+    const out = [head(d.engine_count ?? (d.feeds_engines || []).length, "个引擎", null,
+                      `平台「${d.platform}」能喂`)];
+    const s1 = section("能喂到的引擎");
+    if ((d.feeds_engines || []).length)
+      s1.append(table(["引擎","权重","来源","依据"],
+        d.feeds_engines.map(f => [f.engine, f.weight, f.source, f.why]), [1]));
+    else s1.append(line("!", "fail", d.note || "没查到这个平台。"));
+    out.push(s1);
+    $("out").replaceChildren(...out.filter(Boolean));
+    return;
+  }
+  const recs = d.recommendations || [];
+  const out = [head(recs.length, "个平台", null, `目标引擎 ${(d.target_engines||[]).join("、")}`)];
+  const s1 = section("优先发这些（按加权得分）");
+  s1.append(table(["平台","得分","能喂到的引擎","依据"],
+    recs.map(r => [r.platform, r.score, (r.feeds_engines||[]).join("、"),
+                   (r.rationale||[]).map(x => x.why).join("；")]), [1]));
+  out.push(s1);
+  if (d.unrecognized_engines && d.unrecognized_engines.length) {
+    const s2 = section("未识别的引擎名");
+    s2.append(line("!", "partial", d.unrecognized_engines.join("、") + "（拼写或未收录，已忽略）"));
+    out.push(s2);
+  }
+  out.push(noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/intent"] = d => {
+  const out = [head(d.intent, "", d.confidence, d.query)];
+  out[0].querySelector("b").style.fontSize = "22px";
+  const s1 = section("判定依据");
+  s1.append(line("→", "pass", "命中信号：" + ((d.signals_matched||[]).join("、") || "无明确信号")));
+  s1.append(line(" ", "", "各意图得分：" +
+    Object.entries(d.all_scores||{}).map(([k,v]) => `${k} ${v}`).join(" · ")));
+  out.push(s1);
+  const s2 = section("该怎么做");
+  s2.append(line("1", "", "内容类型：" + d.content_type));
+  s2.append(line("2", "", "推荐 schema：" + (d.recommended_schema||[]).join("、")));
+  s2.append(line("3", "", "战术：" + d.geo_seo_tactic));
+  out.push(s2, noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+const RATE_CLS = {good:"rate-good", "needs-improvement":"rate-ni", poor:"rate-poor"};
+const RATE_ZH = {good:"良好", "needs-improvement":"待改进", poor:"差"};
+RENDER["/api/cwv"] = d => {
+  // overall 是字符串评级("good"/"needs-improvement"/"poor"),不是对象
+  const ov = typeof d.overall === "string" ? d.overall : (d.overall || {}).rating;
+  const worst = Object.entries(d.metrics || {})
+    .filter(([, m]) => m.rating !== "good").map(([k]) => k.toUpperCase());
+  const out = [head(RATE_ZH[ov] || ov || "—", "", null,
+                    worst.length ? "拖后腿的指标：" + worst.join("、") : "三项全部良好")];
+  out[0].querySelector("b").style.fontSize = "22px";
+  out[0].querySelector("b").className = RATE_CLS[ov] || "";
+  const s1 = section("逐项指标");
+  s1.append(table(["指标","实测","评级","良好阈值","差阈值","含义"],
+    Object.entries(d.metrics || {}).map(([k, m]) =>
+      [k.toUpperCase(), m.value + (m.unit || ""), RATE_ZH[m.rating] || m.rating,
+       m.good_threshold, m.poor_threshold, m.desc]), [1,3,4]));
+  out.push(s1, noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/token"] = d => {
+  const over = d.budget && !d.within_budget;
+  const out = [head(d.approx_tokens, "tokens", d.budget ? (over ? "超预算" : "在预算内") : null,
+                    d.budget ? `预算 ${d.budget}` + (over ? ` · 超出 ${d.over_by}` : "") : "")];
+  if (d.budget) out[0].querySelector(".grade").className = "grade " + (over ? "g-bad" : "g-ok");
+  out.push(noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/brief"] = d => {
+  const si = d.search_intent || {};
+  const out = [head((d.sections||[]).length, "个章节", null,
+                    `${d.topic} · 意图 ${si.intent || "—"} · 目标引擎 ${d.target_engine || "通用"}`)];
+  out[0].querySelector("b").style.fontSize = "26px";
+  const s0 = section("骨架");
+  s0.append(line("H1", "", d.h1_suggestion));
+  s0.append(line("TL;DR", "", d.tldr_answer));
+  if (d.anchor_quota) s0.append(line("配额", "", JSON.stringify(d.anchor_quota)));
+  s0.append(line("schema", "", (d.schema_types||[]).join("、")));
+  if (si.tactic) s0.append(line("战术", "", si.tactic));
+  out.push(s0);
+  if ((d.sections||[]).length) {
+    const s1 = section("章节", d.sections.length + " 节");
+    d.sections.forEach((sec, i) => {
+      const c = el("div", "card");
+      const hd = el("div", "hd");
+      hd.append(el("span", null, `${i + 1}. ${sec.h2 || sec.title || sec}`));
+      c.append(hd);
+      if (typeof sec === "object") {
+        const bd = el("div", "bd");
+        for (const [k, v] of Object.entries(sec)) {
+          if (k === "h2" || k === "title") continue;
+          bd.append(el("span", "lbl", k));
+          bd.append(document.createTextNode(Array.isArray(v) ? v.join("；") : String(v)));
+        }
+        c.append(bd);
+      }
+      s1.append(c);
+    });
+    out.push(s1);
+  }
+  if ((d.paa_questions||[]).length) {
+    const s2 = section("相关问题 PAA");
+    d.paa_questions.forEach(q => s2.append(line("?", "", q)));
+    out.push(s2);
+  }
+  if ((d.anti_ai_constraints||[]).length) {
+    const s3 = section("反 AI 味约束");
+    const det = el("details"); det.append(el("summary", null, "展开"));
+    d.anti_ai_constraints.forEach(x => det.append(el("p", "hint", x)));
+    s3.append(det); out.push(s3);
+  }
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/files"] = d => {
+  const out = [head(d.count, "个文件", null, "放到站点根目录")];
+  const s1 = el("div", "sec");
+  for (const [name, content] of Object.entries(d.files)) {
+    const blk = el("div", "fileblk");
+    const hd = el("div", "hd");
+    hd.append(el("span", null, name));
+    const b = el("button", "btn ghost mini", "下载");
+    b.style.marginLeft = "auto";
+    b.onclick = () => {
+      const url = URL.createObjectURL(new Blob([content], {type:"text/plain"}));
+      const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+      URL.revokeObjectURL(url);
+    };
+    hd.append(b); blk.append(hd, el("pre", null, content));
+    s1.append(blk);
+  }
+  out.push(s1, noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/attribution-log"] = d => {
+  const out = [head(d.total_ai_hits, "次 AI 抓取", null,
+                    `识别出 ${d.bots_seen} 个爬虫`)];
+  const kv = (title, obj) => {
+    if (!obj || !Object.keys(obj).length) return null;
+    const s = section(title);
+    s.append(table(["分类","次数"], Object.entries(obj).map(([k,v]) => [k, v]), [1]));
+    return s;
+  };
+  out.push(kv("按地区", d.by_region), kv("按用途", d.by_purpose), kv("按爬虫", d.by_bot));
+  if (d.unknown_uas && d.unknown_uas.length) {
+    const s = section("未识别 UA", d.unknown_uas.length + " 个");
+    d.unknown_uas.slice(0, 20).forEach(u => s.append(line("?", "", u)));
+    out.push(s);
+  }
+  out.push(noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/sourcing"] = d => {
+  const tiers = (d.delivery_sop || {}).tiers || {};
+  const n = ["P0","P1","P2"].reduce((a,t) => a + (tiers[t]||[]).length, 0);
+  const out = [head(n, "个投放平台", null,
+                    `${d.category} · 目标引擎 ${(d.target_engines||[]).join("、")} · 市场 ${d.market}`)];
+  for (const t of ["P0","P1","P2"]) {
+    const items = tiers[t] || [];
+    if (!items.length) continue;
+    const s = section(t + (t === "P0" ? "（先打这批）" : ""), items.length + " 个");
+    s.append(table(["平台","得分","能喂到的引擎","来源"],
+      items.map(x => [x.platform, x.score, (x.feeds_engines||[]).join("、"),
+                      (x.sources||[]).join("、")]), [1]));
+    out.push(s);
+  }
+  const idx = d.layer2_index;
+  if (idx && idx.length) {
+    const s = section("层2 · 收录前置", idx.length + " 条");
+    idx.forEach(x => s.append(line("·", "", x)));
+    out.push(s);
+  }
+  // layer3: [{root, by_intent:{信息:[...], 商业:[...], 交易:[...]}}]
+  for (const m of (d.layer3_query_matrix || [])) {
+    const total = Object.values(m.by_intent || {}).reduce((a, v) => a + v.length, 0);
+    const s = section(`层3 · 问句矩阵：${m.root}`, total + " 问");
+    for (const [intent, qs] of Object.entries(m.by_intent || {})) {
+      s.append(line(intent, "", qs.join("、")));
+    }
+    out.push(s);
+  }
+  // layer4: [{platform, score, feeds_engines, rationale:[{engine,weight,why}], sources}]
+  const pref = d.layer4_source_preference || [];
+  if (pref.length) {
+    const s = section("层4 · 引擎信源偏好", pref.length + " 个平台");
+    s.append(table(["平台","得分","喂到的引擎","为什么","来源"],
+      pref.map(x => [x.platform, x.score, (x.feeds_engines||[]).join("、"),
+                     (x.rationale||[]).map(r => r.why).join("；"),
+                     (x.sources||[]).join("、")]), [1]));
+    out.push(s);
+  }
+  const loop = d.diagnosis_loop;
+  if (loop) {
+    const s = section("诊断闭环");
+    (Array.isArray(loop) ? loop : [loop]).forEach(x =>
+      s.append(line("→", "", typeof x === "string" ? x : JSON.stringify(x))));
+    out.push(s);
+  }
+  const sop = d.delivery_sop || {};
+  if (sop.one_draft_four_forms || sop.cadence || (sop.principles||[]).length) {
+    const s = section("投放 SOP");
+    if (sop.cadence) s.append(line("节奏", "", String(sop.cadence)));
+    if (sop.one_draft_four_forms) s.append(line("一稿多态", "",
+      Array.isArray(sop.one_draft_four_forms) ? sop.one_draft_four_forms.join("；")
+                                              : String(sop.one_draft_four_forms)));
+    (sop.principles||[]).forEach(x => s.append(line("·", "", x)));
+    out.push(s);
+  }
+  out.push(noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/batch"] = d => {
+  const out = [head(d.avg_score, "均分", null, `${d.count} 个页面 · 弱页排前面`)];
+  const s1 = section("逐页得分", "先修最上面的");
+  s1.append(table(["页面","总分","档位","GEO","SEO","否决项"],
+    d.pages.map(x => [x.path, x.score === null ? "错误" : x.score, x.grade,
+                      x.geo_score ?? "—", x.seo_score ?? "—",
+                      (x.vetoes || []).length || "—"]), [1,3,4,5]));
+  out.push(s1);
+  const errs = d.pages.filter(x => x.error);
+  if (errs.length) {
+    const s2 = section("解析失败", errs.length + " 个");
+    errs.forEach(x => s2.append(line("X", "fail", `${x.path}：${x.error}`)));
+    out.push(s2);
+  }
+  $("out").replaceChildren(...out);
+};
+
+RENDER["/api/cannibalize"] = d => {
+  const out = [head(d.conflict_count, "处冲突", d.verdict,
+                    `检查了 ${d.pages_checked} 个页面`)];
+  out[0].querySelector(".grade").className =
+    "grade " + (d.conflict_count ? "g-bad" : "g-ok");
+  if (d.conflicts.length) {
+    const s = section("抢同一意图的页面对");
+    for (const c of d.conflicts) {
+      const card = el("div", "card");
+      const hd = el("div", "hd");
+      hd.append(el("span", "m fail", "X"),
+                el("span", null, `${c.page_a} ↔ ${c.page_b}`),
+                el("em", null, `重叠 ${(c.kw_overlap * 100).toFixed(0)}%`));
+      hd.lastChild.style.marginLeft = "auto";
+      card.append(hd);
+      const bd = el("div", "bd");
+      bd.append(el("span", "lbl", "原因"));
+      (c.reasons || []).forEach(r => bd.append(el("span", "tag", r)));
+      bd.append(el("span", "lbl", "怎么修"), document.createTextNode(c.fix));
+      card.append(bd); s.append(card);
+    }
+    out.push(s);
+  } else {
+    const s = section("结果"); s.append(line("OK", "pass", "没有检出蚕食风险。")); out.push(s);
+  }
+  out.push(noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/internal-links"] = d => {
+  const out = [head(d.orphan_count, "个孤儿页", d.verdict,
+    `${d.pages} 页 · 共 ${d.internal_links_total} 条内链 · 均 ${d.avg_internal_links} 条/页`)];
+  out[0].querySelector(".grade").className =
+    "grade " + (d.orphan_count ? "g-warn" : "g-ok");
+  if (d.orphan_pages.length) {
+    const s = section("孤儿页（0 内链指向，拿不到权重传导）", d.orphan_pages.length + " 个");
+    d.orphan_pages.forEach(x => s.append(line("X", "fail", x)));
+    out.push(s);
+  }
+  if ((d.pages_no_outbound || []).length) {
+    const s = section("无出链页", d.pages_no_outbound.length + " 个");
+    d.pages_no_outbound.forEach(x => s.append(line("!", "partial", x)));
+    out.push(s);
+  }
+  const inb = d.inbound_by_page || {};
+  if (Object.keys(inb).length) {
+    const s = section("各页入链数");
+    s.append(table(["页面","入链数"], Object.entries(inb).map(([k,v]) => [k,v]), [1]));
+    out.push(s);
+  }
+  out.push(noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/measure-kit"] = d => {
+  const out = [head(d.estimated_total_samples, "次采样", null,
+    `${(d.prompts_to_ask||[]).length} 个问句 × ${(d.engines||[]).length || "?"} 个引擎 × ${d.sample_per_prompt_engine} 次`)];
+  const s0 = section("采样协议");
+  s0.append(line("→", "", d.protocol));
+  if (!d.engines_specified) s0.append(line("!", "partial", "没指定引擎，工作量按默认基数估算。"));
+  out.push(s0);
+  if ((d.prompts_to_ask||[]).length) {
+    const s1 = section("去问这些", d.prompts_to_ask.length + " 个问句");
+    d.prompts_to_ask.forEach((q, i) => s1.append(line(String(i + 1), "", q)));
+    out.push(s1);
+  }
+  const s2 = section("回传格式");
+  s2.append(el("pre", null, JSON.stringify(d.records_schema, null, 2)));
+  out.push(s2);
+  if ((d.feed_back||[]).length) {
+    const s3 = section("采完喂回哪里");
+    d.feed_back.forEach(x => s3.append(line("·", "", x)));
+    out.push(s3);
+  }
+  out.push(noteOf(d.note));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+function sovSections(d) {
+  const out = [];
+  const cov = d.coverage || {};
+  const s0 = section("覆盖率", `${cov.hit}/${cov.total} 个问句-引擎组`);
+  s0.append(bar(cov.rate || 0));
+  s0.append(line("→", cov.rate >= 50 ? "pass" : "fail", `至少被提到一次的比例 ${cov.rate}%`));
+  if (d.competitive_tier) s0.append(line("档位", "", String(d.competitive_tier)));
+  out.push(s0);
+  const formulas = [["mention_sov","提及份额"],["weighted_sov","加权份额（按出现位置）"],
+                    ["citation_sov","引用份额（按被引 URL）"]];
+  for (const [key, name] of formulas) {
+    const m = d[key]; if (!m || !Object.keys(m).length) continue;
+    const s = section(name);
+    for (const [who, v] of Object.entries(m)) {
+      const isYou = who === d.brand;
+      s.append(line(isYou ? "你" : "·", isYou ? "pass" : "", `${who} ${v}%`));
+      const b = bar(v); b.style.marginLeft = "22px";
+      if (!isYou) b.querySelector("i").style.background = "var(--ink-3)";
+      s.append(b);
+    }
+    out.push(s);
+  }
+  const oe = d.citation_owned_earned;
+  if (oe) {
+    const s = section("自有 vs 获得型引用");
+    s.append(line("→", oe.earned_pct >= 50 ? "pass" : "partial",
+      `earned ${oe.earned} 条 / owned ${oe.owned} 条，earned 占 ${oe.earned_pct}%`));
+    s.append(el("p", "hint", oe.note));
+    out.push(s);
+  }
+  if (d.mention_sentiment && Object.keys(d.mention_sentiment).length) {
+    const s = section("提及情感");
+    s.append(el("pre", null, JSON.stringify(d.mention_sentiment, null, 2)));
+    out.push(s);
+  }
+  if (d.per_engine_mention_sov && Object.keys(d.per_engine_mention_sov).length) {
+    const s = section("分引擎提及份额");
+    const engines = Object.keys(d.per_engine_mention_sov);
+    const names = [...new Set(engines.flatMap(e => Object.keys(d.per_engine_mention_sov[e])))];
+    s.append(table(["引擎", ...names],
+      engines.map(e => [e, ...names.map(n => (d.per_engine_mention_sov[e][n] ?? 0) + "%")]),
+      names.map((_, i) => i + 1)));
+    out.push(s);
+  }
+  if (d.sampling) {
+    const s = section("采样置信度");
+    s.append(el("pre", null, JSON.stringify(d.sampling, null, 2)));
+    out.push(s);
+  }
+  return out;
+}
+
+RENDER["/api/sov"] = d => {
+  const mine = (d.mention_sov || {})[d.brand] ?? 0;
+  const out = [head(mine, "% 提及份额", null,
+    `${d.brand} · 对手 ${(d.competitors||[]).join("、") || "无"} · 引擎 ${(d.engines||[]).join("、")}`)];
+  out.push(...sovSections(d));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+function lostSections(d) {
+  const out = [];
+  const s0 = section("战况", `赢 ${d.won_count} · 争 ${d.contested_count} · 输 ${d.lost_count}`);
+  s0.append(line(d.lost_count ? "X" : "OK", d.lost_count ? "fail" : "pass",
+    d.lost_count ? `有 ${d.lost_count} 个问句被竞品独占，优先夺回。`
+                 : "没有被竞品独占的问句。"));
+  out.push(s0);
+  if ((d.lost_prompts||[]).length) {
+    const s = section("被夺走的问句", d.lost_prompts.length + " 个");
+    d.lost_prompts.forEach(x => s.append(line("X", "fail",
+      typeof x === "string" ? x : `${x.prompt || ""}（${x.engine || ""}）${
+        (x.competitors_present||[]).join("、")}`)));
+    out.push(s);
+  }
+  if ((d.top_displacers||[]).length) {
+    const s = section("谁抢走的");
+    s.append(table(["竞品","夺走问句数"],
+      d.top_displacers.map(x => Array.isArray(x) ? x : [x.competitor || x.name, x.count]), [1]));
+    out.push(s);
+  }
+  if (d.lost_by_engine && Object.keys(d.lost_by_engine).length) {
+    const s = section("按引擎分布");
+    s.append(table(["引擎","输掉数"], Object.entries(d.lost_by_engine), [1]));
+    out.push(s);
+  }
+  out.push(noteOf(d.note));
+  return out;
+}
+
+RENDER["/api/lostprompt"] = d => {
+  const out = [head(d.lost_count, "个问句被夺走", null,
+    `${d.brand} vs ${(d.competitors||[]).join("、")}`)];
+  out[0].querySelector(".grade");
+  out.push(...lostSections(d));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+function factSections(d) {
+  const out = [];
+  if ((d.conflicts||[]).length) {
+    const s = section("AI 说错的地方", d.conflict_count + " 处");
+    for (const c of d.conflicts) {
+      const card = el("div", "card");
+      const hd = el("div", "hd");
+      hd.append(el("span", "m fail", "X"),
+                el("span", null, `${c.attribute}　${c.engine || ""}`));
+      card.append(hd);
+      const bd = el("div", "bd");
+      bd.append(el("span", "lbl", "问句"), document.createTextNode(c.prompt || "—"));
+      bd.append(el("span", "lbl", "AI 说"), document.createTextNode(c.ai_said));
+      bd.append(el("span", "lbl", "实际是"), document.createTextNode(c.truth));
+      bd.append(el("span", "lbl", "怎么纠"), document.createTextNode(c.fix));
+      card.append(bd); s.append(card);
+    }
+    out.push(s);
+  } else {
+    const s = section("结果");
+    s.append(line("OK", "pass", "没检出错误信息（只检你在真相里声明过的错误说法）。"));
+    out.push(s);
+  }
+  out.push(noteOf(d.note));
+  return out;
+}
+
+RENDER["/api/factcheck"] = d => {
+  const out = [head(d.conflict_count, "处错误", d.verdict,
+    `${d.brand} · 检查了 ${d.records_checked} 条记录`)];
+  out[0].querySelector(".grade").className =
+    "grade " + (d.conflict_count ? "g-bad" : "g-ok");
+  out.push(...factSections(d));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+RENDER["/api/measure"] = d => {
+  const mine = ((d.sov || {}).mention_sov || {})[d.brand] ?? 0;
+  const out = [head(mine, "% 提及份额", null,
+    `${d.brand} · ${d.record_count} 条采样记录`)];
+  const h = t => { const x = section("── " + t + " ──"); x.querySelector("h3").style.color = "var(--accent)"; return x; };
+  out.push(h("声量份额"), ...sovSections(d.sov || {}));
+  out.push(h("竞品夺走"), ...lostSections(d.lostprompt || {}));
+  if (d.factcheck) out.push(h("错误信息"), ...factSections(d.factcheck));
+  $("out").replaceChildren(...out.filter(Boolean));
+};
+
+// ---- 下载 ----
+function addDownload(path, payload, filename, label) {
+  const btn = el("button", "btn ghost", label);
+  $("downloads").append(btn);
+  btn.onclick = async () => {
+    btn.disabled = true;
+    try {
+      const r = await fetch(path, {method:"POST", headers:{"Content-Type":"application/json"},
+                                   body: JSON.stringify(payload)});
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const ext = filename.split(".").pop();
+      const url = URL.createObjectURL(new Blob([await r.text()],
+        {type: {csv:"text/csv", md:"text/markdown", sarif:"application/json"}[ext] || "text/html"}));
+      const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { $("status").textContent = "下载失败：" + e.message; }
+    finally { btn.disabled = false; }
+  };
+}
+
+selectTab("score");
+</script>
+</body>
+</html>
